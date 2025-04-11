@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"fmt"
 	"gioui.org/app"
 	"gioui.org/io/system"
 	"gioui.org/layout"
@@ -11,40 +12,49 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/getlantern/systray"
+	"github.com/taraszh/mad_telegram/tray"
+	"github.com/taraszh/mad_telegram/tray/systray_adapter"
 	"image/color"
+	"math"
 	"os"
 	"sync"
 )
 
 const maxInputLength = 5
 
-//go:embed icon.ico
+//go:embed tray/systray_adapter/icon.ico
 var iconData []byte
 
 var window *app.Window
-var showWindow = make(chan struct{})
+var showWindow = make(chan struct{}, 1)
 
 var inputEditor widget.Editor
 var submitButton widget.Clickable
 var submittedText string
 
-var wg sync.WaitGroup // Для синхронізації горутин
+var wg sync.WaitGroup
 
 func main() {
+	var sysTray tray.Tray = &systray_adapter.SystrayAdapter{}
+
 	go func() {
-		systray.Run(onReady, func() {
-			os.Exit(0)
-		})
+		sysTray.Run(
+			func() { onReady(sysTray) },
+			func() { os.Exit(0) },
+		)
 	}()
 
 	go func() {
 		for range showWindow {
+			println(fmt.Sprintf("Trigger received. Is window nil: %v", window == nil))
+
 			if window == nil {
 				wg.Add(1)
 				openInputWindow()
 				processMessage()
-				submittedText = ""
+				clearSubmittedText()
+			} else {
+				println("Window is already open, ignoring trigger.")
 			}
 		}
 	}()
@@ -52,23 +62,22 @@ func main() {
 	select {}
 }
 
-func processMessage() {
-	submittedText = submittedText[:maxInputLength]
+func onReady(trayAdapter tray.Tray) {
+	trayAdapter.SetIcon(iconData)
+	trayAdapter.SetTooltip("wacky_message")
+	trayAdapter.AddMenu(
+		"Open message modifier",
+		"Open input window",
+		func() { showWindow <- struct{}{} },
+	)
 
-	println(submittedText + " - " + "Message sent")
-}
+	trayAdapter.AddSeparator()
 
-func onReady() {
-	systray.SetIcon(iconData)
-	systray.SetTooltip("wacky_message")
-	systray.AddMenuItem("Open message modifier", "Open input window").ClickedCh = showWindow
-	systray.AddSeparator()
-	quit := systray.AddMenuItem("Quit", "Exit app")
-
-	go func() {
-		<-quit.ClickedCh
-		systray.Quit()
-	}()
+	trayAdapter.AddMenu(
+		"Quit",
+		"Exit app",
+		func() { trayAdapter.Quit() },
+	)
 }
 
 func openInputWindow() {
@@ -129,4 +138,19 @@ func openInputWindow() {
 			e.Frame(gtx.Ops)
 		}
 	}
+}
+
+func clearSubmittedText() {
+	submittedText = ""
+}
+
+func processMessage() {
+	if len(submittedText) == 0 {
+		println("No text submitted")
+		return
+	}
+
+	submittedText = submittedText[:int(math.Min(float64(len(submittedText)), float64(maxInputLength)))]
+
+	println(submittedText + " - " + "🗡️")
 }
