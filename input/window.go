@@ -13,6 +13,9 @@ import (
 	"image/color"
 )
 
+// Window
+// ToDo: implement as adapter
+// /*
 type Window struct {
 	gioWindow *app.Window
 }

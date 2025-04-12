@@ -1,5 +1,7 @@
 # Wacky Message. Clipboard Translation, Creative Modification, and Input Inserter
 
+Learning to use Go by roughly implementing any crazy idea
+
 This project processes text from the clipboard, translates it into various languages, and inserts the translated text into an active input field in an open window.
 
 ## Description
