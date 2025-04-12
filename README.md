@@ -1,10 +1,10 @@
-# Wacky Message. Clipboard Translation, Creative Modification, and Input Inserter
+# Wacky Message. Clipboard Translation, Creative Modification
 
 This project processes text from the clipboard, translates it into various languages, and inserts the translated text into an active input field in an open window.
 
 ## Description
 
-The project allows users to automatically translate the text in the clipboard and paste the translated text into the corresponding input field in active applications. It supports multiple languages and can be customized for specific applications.
+The project allows users to automatically translate the text in the clipboard and paste the translated text into the corresponding input field in active applications.
 
 ## Features
 

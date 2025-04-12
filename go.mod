@@ -1,4 +1,4 @@
-module github.com/taraszh/mad_telegram
+module wacky_message
 
 go 1.24.0
 

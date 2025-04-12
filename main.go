@@ -2,30 +2,26 @@ package main
 
 import (
 	_ "embed"
-	"fmt"
-	"github.com/taraszh/mad_telegram/input"
-	"github.com/taraszh/mad_telegram/tray"
-	"github.com/taraszh/mad_telegram/tray/systray_adapter"
 	"math"
 	"os"
-	"sync"
+	"strings"
+	"time"
+	"wacky_message/tray"
+	"wacky_message/tray/systray_adapter"
+	"wacky_message/windows"
 )
 
-const maxInputLength = 500
+const maxInputLength = 1000
+const minInputLength = 6
+const triggerTemplate = "!!1"
 
 //go:embed tray/systray_adapter/icon.ico
 var iconData []byte
 
-// var window *app.Window
-
-var message string
-var showWindow = make(chan struct{}, 1)
-
-var wg = &sync.WaitGroup{}
-
 func main() {
-	var sysTray tray.Tray = &systray_adapter.SystrayAdapter{}
-	var inputWindow *input.Window = input.NewInputWindow()
+	var sysTray = &systray_adapter.SystrayAdapter{}
+	var user32 = windows.NewUser32()
+	var message string
 
 	go func() {
 		sysTray.Run(
@@ -35,21 +31,14 @@ func main() {
 	}()
 
 	go func() {
-		for range showWindow {
-			wg.Add(1)
+		for {
+			message = getMessageFromClipBoard()
 
-			println(fmt.Sprintf("Trigger received. Is inputWindow nil: %v", inputWindow == nil))
-
-			if inputWindow.GetWindow() == nil {
-				defer wg.Done()
-
-				message = inputWindow.OpenInputWindow()
-				processMessage()
-				clearSubmittedText()
-			} else {
-				println("Window is already open, ignoring trigger.")
+			if message != "" {
+				user32.SendString(modifyMessage(message))
 			}
 
+			time.Sleep(200 * time.Millisecond)
 		}
 	}()
 
@@ -59,26 +48,39 @@ func main() {
 func onReady(trayAdapter tray.Tray) {
 	trayAdapter.SetIcon(iconData)
 	trayAdapter.SetTooltip("wacky_message")
-	trayAdapter.AddMenu(
-		"Open message modifier",
-		"Open input window",
-		func() { showWindow <- struct{}{} },
-	)
-	trayAdapter.AddSeparator()
-	trayAdapter.AddMenu("Quit", "Exit app", func() { trayAdapter.Quit() })
+	trayAdapter.AddMenu("Quit", "", func() { trayAdapter.Quit() })
 }
 
-func clearSubmittedText() {
-	message = ""
-}
+func getMessageFromClipBoard() string {
+	message, _ := windows.GetClipboardText()
+	clean := strings.ReplaceAll(message, "\t", "")
+	clean = strings.ReplaceAll(clean, "\n", "")
+	clean = strings.ReplaceAll(clean, "\r", "")
 
-func processMessage() {
-	if len(message) == 0 {
-		println("No text submitted")
-		return
+	if strings.HasSuffix(clean, triggerTemplate) && len(clean) > minInputLength {
+		println("Message found by template")
+
+		err := windows.SetClipboardText("Modifying message 🗡️")
+
+		if err != nil {
+			println("Error setting clipboard text:", err)
+		}
+
+		return clean
 	}
 
+	return ""
+}
+
+func modifyMessage(message string) string {
+	println("Modifying message")
+
+	message = strings.TrimSuffix(message, triggerTemplate)
 	message = message[:int(math.Min(float64(len(message)), float64(maxInputLength)))]
 
-	println(message + " - " + "🗡️")
+	modifiedMessage := message + " - " + "🗡️"
+
+	println("Modified message: ", modifiedMessage)
+
+	return modifiedMessage
 }
