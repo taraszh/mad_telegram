@@ -1,4 +1,4 @@
-# Mad Message. Clipboard Translation, Creative Modification, and Input Inserter
+# Wacky Message. Clipboard Translation, Creative Modification, and Input Inserter
 
 This project processes text from the clipboard, translates it into various languages, and inserts the translated text into an active input field in an open window.
 
