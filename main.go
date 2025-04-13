@@ -10,7 +10,7 @@ import (
 	"wacky_message/text/translate"
 	"wacky_message/tray"
 	"wacky_message/tray/systray_adapter"
-	"wacky_message/windows"
+	"wacky_message/utils/windows"
 )
 
 const maxInputLength = 1000
