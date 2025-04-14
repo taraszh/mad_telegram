@@ -2,32 +2,40 @@ package main
 
 import (
 	_ "embed"
+	windows_go "golang.org/x/sys/windows"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 	"wacky_message/text/emoji"
 	"wacky_message/text/translate"
 	"wacky_message/tray"
 	"wacky_message/tray/systray_adapter"
-	"wacky_message/utils/windows"
+	os_local "wacky_message/utils/os"
+	"wacky_message/utils/os/windows"
 )
 
 const maxInputLength = 1000
 const minInputLength = 6
-const triggerTemplate = "!!1"
+const triggerSuffix = "!!1"
 
 //go:embed tray/systray_adapter/icon.ico
 var iconData []byte
 
 func main() {
-	var sysTray = &systray_adapter.SystrayAdapter{}
-	var user32 = windows.NewUser32()
+	if !isWindows() {
+		println("At the moment, this application is supported exclusively on Windows.")
+		return
+	}
 
-	var message string
+	var sysTray = &systray_adapter.SystrayAdapter{}
+	var keyboard = windows.NewKeyboard()
 
 	var emojifier = emoji.NewEndStringEmojifier()
 	var translator = translate.NewGoogleTranslator()
+
+	var clipboard = windows.NewClipboard()
 
 	go func() {
 		sysTray.Run(
@@ -36,20 +44,35 @@ func main() {
 		)
 	}()
 
+	processMessagesWithTrigger(clipboard, keyboard, translator, emojifier)
+
+	select {}
+}
+
+func processMessagesWithTrigger(clipboard *windows.Clipboard, keyboard *windows.Keyboard, translator *translate.GoogleTranslator, emojifier *emoji.EndStringEmojifier) {
+	var message string
+
 	go func() {
 		for {
-			message = getMessageFromClipBoard()
+			message = getMessageFromClipBoard(clipboard)
 
 			if message != "" {
 				println("Message found in clipboard")
-				user32.TypeMessage(modifyMessage(message, translator, emojifier))
+
+				err := keyboard.TypeMessage(modifyMessage(message, translator, emojifier))
+				if err != nil {
+					println("Error typing message:", err)
+				}
+
+				fg_window := windows_go.GetForegroundWindow()
+				if fg_window != 0 {
+					println("FG window found")
+				}
 			}
 
 			time.Sleep(200 * time.Millisecond)
 		}
 	}()
-
-	select {}
 }
 
 func onReady(trayAdapter tray.Tray) {
@@ -58,16 +81,15 @@ func onReady(trayAdapter tray.Tray) {
 	trayAdapter.AddMenu("Quit", "", func() { trayAdapter.Quit() })
 }
 
-func getMessageFromClipBoard() string {
-	message, _ := windows.GetClipboardText()
+func getMessageFromClipBoard(clipboard os_local.Clipboard) string {
+	message, _ := clipboard.GetText()
 	clean := strings.ReplaceAll(message, "\t", "")
-	clean = strings.ReplaceAll(clean, "\n", "")
 	clean = strings.ReplaceAll(clean, "\r", "")
 
-	if strings.HasSuffix(clean, triggerTemplate) && len(clean) > minInputLength {
+	if strings.HasSuffix(clean, triggerSuffix) && len(clean) > minInputLength {
 		println("Message found by template")
 
-		err := windows.SetClipboardText("Modifying message 🗡️")
+		err := clipboard.SetText("Modifying message 🗡️")
 
 		if err != nil {
 			println("Error setting clipboard text:", err)
@@ -80,23 +102,28 @@ func getMessageFromClipBoard() string {
 }
 
 func modifyMessage(
-	message string,
+	originalMessage string,
 	translator translate.Translator,
 	emojifier emoji.Emojifier,
 ) string {
 	println("Modifying message")
 
-	message = strings.TrimSuffix(message, triggerTemplate)
-	message = message[:int(math.Min(float64(len(message)), float64(maxInputLength)))]
+	originalMessage = strings.TrimSuffix(originalMessage, triggerSuffix)
+	originalMessage = originalMessage[:int(math.Min(float64(len(originalMessage)), float64(maxInputLength)))]
 
-	println("Original message: ", message)
+	println("Original message: ", originalMessage)
 
-	translatedMessage, _ := translator.Translate(message)
-	translatedEmojifierMessage, _ := emojifier.Emojify(translatedMessage)
+	translatedMessage, _ := translator.Translate(originalMessage)
+	translatedEmojifiedMessage, _ := emojifier.Emojify(translatedMessage)
+	originalEmojifiedMessage, _ := emojifier.Emojify(originalMessage)
 
-	output := message + "\n" + translatedEmojifierMessage
+	output := originalEmojifiedMessage + "\n" + translatedEmojifiedMessage
 
-	println("Modified message: ", translatedEmojifierMessage)
+	println("Modified message: ", translatedEmojifiedMessage)
 
 	return output
+}
+
+func isWindows() bool {
+	return runtime.GOOS == "windows"
 }

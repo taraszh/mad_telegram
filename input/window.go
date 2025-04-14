@@ -13,6 +13,9 @@ import (
 	"image/color"
 )
 
+// Window
+// ToDo: implement as adapter
+// /*
 type Window struct {
 	gioWindow *app.Window
 }
@@ -53,7 +56,7 @@ func (w Window) OpenInputWindow() string {
 
 			gtx := app.NewContext(&ops, e)
 
-			title := material.H5(theme, "☠️Crazy Message🤪")
+			title := material.H5(theme, "☠️Wacky Message🤪")
 			title.Color = black
 			title.Alignment = text.Middle
 
