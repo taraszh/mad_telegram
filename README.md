@@ -19,6 +19,15 @@ The project allows users to automatically translate the text in the clipboard an
     - The application continuously monitors the clipboard for text that ends with the trigger suffix `!!1`.
     - If a matching message is found, it modifies the message and sends it to the active window.
 
+3. **Using the Hotkey**:
+- The application supports the `F1` hotkey for processing text.
+- To use the hotkey:
+    1. Press `F1`.
+    2. The application will:
+        - Copy the selected text to the clipboard.
+        - Process the text (e.g., translation, adding emojis).
+        - Paste the modified text back into the active input field.
+
 4. **System Tray**:
     - The application runs in the system tray.
     - Right-click the tray icon to access the "Quit" option to exit the application.

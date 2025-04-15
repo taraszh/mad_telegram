@@ -2,11 +2,12 @@ package main
 
 import (
 	_ "embed"
-	windows_go "golang.org/x/sys/windows"
+	"fmt"
 	"math"
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 	"wacky_message/text/emoji"
 	"wacky_message/text/translate"
@@ -14,14 +15,17 @@ import (
 	"wacky_message/tray/systray_adapter"
 	os_local "wacky_message/utils/os"
 	"wacky_message/utils/os/windows"
+	"golang.design/x/hotkey"
 )
 
-const maxInputLength = 1000
-const minInputLength = 6
+const maxInputLength = 300
+const minInputLength = 4
 const triggerSuffix = "!!1"
 
 //go:embed tray/systray_adapter/icon.ico
 var iconData []byte
+
+var processing sync.Mutex
 
 func main() {
 	if !isWindows() {
@@ -31,48 +35,100 @@ func main() {
 
 	var sysTray = &systray_adapter.SystrayAdapter{}
 	var keyboard = windows.NewKeyboard()
+	var hk = hotkey.New(nil, hotkey.KeyF1)
 
 	var emojifier = emoji.NewEndStringEmojifier()
 	var translator = translate.NewGoogleTranslator()
-
 	var clipboard = windows.NewClipboard()
 
-	go func() {
-		sysTray.Run(
-			func() { onReady(sysTray) },
-			func() { os.Exit(0) },
-		)
-	}()
+	messageQueue := make(chan string, 10)
 
-	processMessagesWithTrigger(clipboard, keyboard, translator, emojifier)
+	go sysTray.Run(
+		func() { onReady(sysTray) },
+		func() { os.Exit(0) },
+	)
+
+	go processMessagesWithTrigger(clipboard, messageQueue)
+	go processMessageByHotkey(hk, clipboard, keyboard, messageQueue)
+
+	processMessageQueue(messageQueue, keyboard, translator, emojifier)
 
 	select {}
 }
 
-func processMessagesWithTrigger(clipboard *windows.Clipboard, keyboard *windows.Keyboard, translator *translate.GoogleTranslator, emojifier *emoji.EndStringEmojifier) {
-	var message string
+func processMessagesWithTrigger(
+	clipboard *windows.Clipboard,
+	queue chan<- string,
+) {
+	_ = clipboard.SetText("")
 
-	go func() {
-		for {
-			message = getMessageFromClipBoard(clipboard)
+	for {
+		message := getMessageFromClipBoard(clipboard)
 
-			if message != "" {
-				println("Message found in clipboard")
+		if isTriggerPresent(message) && message != "" {
+			processing.Lock()
 
-				err := keyboard.TypeMessage(modifyMessage(message, translator, emojifier))
-				if err != nil {
-					println("Error typing message:", err)
-				}
+			clearClipboard(clipboard)
 
-				fg_window := windows_go.GetForegroundWindow()
-				if fg_window != 0 {
-					println("FG window found")
-				}
-			}
+			println("Message found in clipboard by template")
+			queue <- message
 
-			time.Sleep(200 * time.Millisecond)
+			processing.Unlock()
 		}
-	}()
+
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func processMessageByHotkey(
+	hotkey *hotkey.Hotkey,
+	clipboard *windows.Clipboard,
+	keyboard *windows.Keyboard,
+	queue chan<- string,
+) {
+	if err := hotkey.Register(); err != nil {
+		panic("failed to register F1: " + err.Error())
+	}
+
+	fmt.Println("Hotkey F1 is active. Press it!")
+
+	for {
+		<-hotkey.Keydown()
+		fmt.Println("F1 pressed — action triggered!")
+
+		keyboard.SendCtrlPlusKey(windows.VK_A)
+		keyboard.SendCtrlPlusKey(windows.VK_X)
+
+		time.Sleep(20 * time.Millisecond)
+
+		message := getMessageFromClipBoard(clipboard)
+
+		if message != "" {
+			processing.Lock()
+
+			clearClipboard(clipboard)
+
+			println("Message found in clipboard after hotkey")
+			queue <- message
+
+			processing.Unlock()
+		}
+	}
+}
+
+func processMessageQueue(
+	queue <-chan string,
+	keyboard *windows.Keyboard,
+	translator *translate.GoogleTranslator,
+	emojifier *emoji.EndStringEmojifier,
+) {
+	for message := range queue {
+		modified := modifyMessage(message, translator, emojifier)
+		err := keyboard.TypeMessage(modified)
+		if err != nil {
+			println("Error typing message:", err)
+		}
+	}
 }
 
 func onReady(trayAdapter tray.Tray) {
@@ -86,19 +142,7 @@ func getMessageFromClipBoard(clipboard os_local.Clipboard) string {
 	clean := strings.ReplaceAll(message, "\t", "")
 	clean = strings.ReplaceAll(clean, "\r", "")
 
-	if strings.HasSuffix(clean, triggerSuffix) && len(clean) > minInputLength {
-		println("Message found by template")
-
-		err := clipboard.SetText("Modifying message 🗡️")
-
-		if err != nil {
-			println("Error setting clipboard text:", err)
-		}
-
-		return clean
-	}
-
-	return ""
+	return clean
 }
 
 func modifyMessage(
@@ -126,4 +170,20 @@ func modifyMessage(
 
 func isWindows() bool {
 	return runtime.GOOS == "windows"
+}
+
+func clearClipboard(clipboard *windows.Clipboard) {
+	err := clipboard.SetText("Knife in your clipboard 🗡️")
+
+	if err != nil {
+		println("Error setting clipboard text:", err)
+	}
+}
+
+func isTriggerPresent(message string) bool {
+	if strings.HasSuffix(message, triggerSuffix) && len(message) > minInputLength {
+		return true
+	}
+
+	return false
 }

@@ -1,6 +1,8 @@
-package input
+package window
 
 import (
+	"image/color"
+
 	"gioui.org/app"
 	"gioui.org/io/system"
 	"gioui.org/layout"
@@ -10,7 +12,6 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"image/color"
 )
 
 // Window
@@ -77,13 +78,17 @@ func (w Window) OpenInputWindow() string {
 						Axis: layout.Vertical,
 					}.Layout(
 						gtx,
-						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(theme, &inputEditor, "Enter a message...").Layout(gtx)
-						}),
+						layout.Rigid(
+							func(gtx layout.Context) layout.Dimensions {
+								return material.Editor(theme, &inputEditor, "Enter a message...").Layout(gtx)
+							},
+						),
 						layout.Rigid(layout.Spacer{Height: unit.Dp(10)}.Layout),
-						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							return material.Button(theme, &submitButton, "Modify and Insert").Layout(gtx)
-						}),
+						layout.Rigid(
+							func(gtx layout.Context) layout.Dimensions {
+								return material.Button(theme, &submitButton, "Modify and Insert").Layout(gtx)
+							},
+						),
 					)
 				},
 			)

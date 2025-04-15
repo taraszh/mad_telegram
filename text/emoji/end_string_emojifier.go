@@ -16,9 +16,18 @@ func NewEndStringEmojifier() *EndStringEmojifier {
 }
 
 func (e *EndStringEmojifier) Emojify(message string) (string, error) {
-	randomEmoji := themedEmojis[e.rng.Intn(len(themedEmojis))]
+	randomEmoji := shuffledEmojis[e.rng.Intn(len(shuffledEmojis))]
 
 	return message + " " + randomEmoji, nil
+}
+
+var shuffledEmojis = []string{
+	"⭐", "🔔", "🕍", "🦁", "🕰️", "🪓", "🎆", "🌚", "🌲", "🍃", "📜", "⚗️", "🐉", "🪐", "🕸️",
+	"🐚", "🍀", "🍄‍🟫", "🏺", "⚙️", "🏹", "⚔️", "🏞️", "💣", "🍁", "🧊", "😈️", "👻", "🕯",
+	"✨", "🌳", "🗝️", "⛪", "⚒️", "🍄", "⚖️", "🔥", "🔒", "🌄", "🛠️", "🧭",
+	"🔮", "☄️", "🌹", "🌺", "🌿", "🌋", "🧪", "🌙", "🪨", "🌱", "🌸", "🛞", "⛓️", "🧱",
+	"🧪", "🍂", "🌼", "⌛", "❄️", "🌍", "🗡️", "🏰", "✨", "🧛", "🛡️", "⚗️", "🪝",
+	"⛰️", "🌊", "🧙‍♂️",
 }
 
 var themedEmojis = []string{
@@ -37,7 +46,6 @@ var themedEmojis = []string{
 	"⚒️", // Hammer and Pick
 	"🕰️", // Mantelpiece Clock (for clockwork)
 	"⌛",  // Hourglass
-	"⏳",  // Hourglass with Flowing Sand
 	"⚖️", // Balance Scale
 	"🪤",  // Mouse Trap
 	"🧲",  // Magnet

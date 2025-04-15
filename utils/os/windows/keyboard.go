@@ -43,9 +43,6 @@ const (
 )
 
 func (k *Keyboard) TypeMessage(text string) error {
-	const VK_ENTER = 0x0D
-	const VK_SHIFT = 0x10
-
 	for _, r := range text {
 		if r == '\n' {
 			k.SendKeyDown(VK_SHIFT)
@@ -75,11 +72,21 @@ func (k *Keyboard) TypeMessage(text string) error {
 			input.Ki.Flags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP
 			k.sendInput.Call(1, uintptr(unsafe.Pointer(&input)), unsafe.Sizeof(input))
 
-			time.Sleep(25 * time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 		}
 	}
 
 	return nil
+}
+
+func (k *Keyboard) SendCtrlPlusKey(key byte) {
+	k.SendKeyDown(VK_CONTROL)
+	time.Sleep(15 * time.Millisecond)
+	k.SendKeyDown(key)
+	time.Sleep(15 * time.Millisecond)
+	k.SendKeyUp(key)
+	time.Sleep(15 * time.Millisecond)
+	k.SendKeyUp(VK_CONTROL)
 }
 
 func (k *Keyboard) SendKeyDown(key uint8) {
@@ -88,17 +95,4 @@ func (k *Keyboard) SendKeyDown(key uint8) {
 
 func (k *Keyboard) SendKeyUp(key uint8) {
 	k.keybdEvent.Call(uintptr(key), 0, 2, 0)
-}
-
-func (k *Keyboard) SendCtrlA() {
-	const VK_CONTROL = 0x11
-	const VK_A = 0x41
-
-	k.SendKeyDown(VK_CONTROL)
-	time.Sleep(15 * time.Millisecond)
-	k.SendKeyDown(VK_A)
-	time.Sleep(15 * time.Millisecond)
-	k.SendKeyUp(VK_A)
-	time.Sleep(15 * time.Millisecond)
-	k.SendKeyUp(VK_CONTROL)
 }

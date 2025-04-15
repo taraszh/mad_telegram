@@ -1,0 +1,6 @@
+[{*.go,*.go2}]
+ij_go_call_parameters_wrap = on_every_item
+ij_go_wrap_comp_lit = on_every_item
+ij_go_wrap_func_params = on_every_item
+ij_go_wrap_func_result = on_every_item
+ij_go_import_sorting = goimports
