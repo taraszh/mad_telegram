@@ -13,12 +13,14 @@ import (
 	"wacky_message/text/translate"
 	"wacky_message/tray"
 	"wacky_message/tray/systray_adapter"
-	os_local "wacky_message/utils/os"
-	"wacky_message/utils/os/windows"
+	oslocal "wacky_message/utils/os"
+	utils "wacky_message/utils/os/windows"
+	"wacky_message/window"
+
 	"golang.design/x/hotkey"
 )
 
-const maxInputLength = 300
+const maxInputLength = 600
 const minInputLength = 4
 const triggerSuffix = "!!1"
 
@@ -27,6 +29,8 @@ var iconData []byte
 
 var processing sync.Mutex
 
+var selectedWindows []string
+
 func main() {
 	if !isWindows() {
 		println("At the moment, this application is supported exclusively on Windows.")
@@ -34,22 +38,23 @@ func main() {
 	}
 
 	var sysTray = &systray_adapter.SystrayAdapter{}
-	var keyboard = windows.NewKeyboard()
+	var windowsUtils, _ = utils.NewWindow()
+	var keyboard = utils.NewKeyboard()
 	var hk = hotkey.New(nil, hotkey.KeyF1)
 
 	var emojifier = emoji.NewEndStringEmojifier()
 	var translator = translate.NewGoogleTranslator()
-	var clipboard = windows.NewClipboard()
+	var clipboard = utils.NewClipboard()
 
 	messageQueue := make(chan string, 10)
 
 	go sysTray.Run(
-		func() { onReady(sysTray) },
+		func() { onReady(sysTray, windowsUtils) },
 		func() { os.Exit(0) },
 	)
 
 	go processMessagesWithTrigger(clipboard, messageQueue)
-	go processMessageByHotkey(hk, clipboard, keyboard, messageQueue)
+	go processMessageByHotkey(hk, clipboard, keyboard, windowsUtils, messageQueue)
 
 	processMessageQueue(messageQueue, keyboard, translator, emojifier)
 
@@ -57,9 +62,11 @@ func main() {
 }
 
 func processMessagesWithTrigger(
-	clipboard *windows.Clipboard,
+	clipboard *utils.Clipboard,
 	queue chan<- string,
 ) {
+	fmt.Println("Clipboard trigger is registered. Waiting for messages...")
+
 	_ = clipboard.SetText("")
 
 	for {
@@ -82,22 +89,28 @@ func processMessagesWithTrigger(
 
 func processMessageByHotkey(
 	hotkey *hotkey.Hotkey,
-	clipboard *windows.Clipboard,
-	keyboard *windows.Keyboard,
+	clipboard *utils.Clipboard,
+	keyboard *utils.Keyboard,
+	windowsUtil *utils.Window,
 	queue chan<- string,
 ) {
 	if err := hotkey.Register(); err != nil {
 		panic("failed to register F1: " + err.Error())
 	}
 
-	fmt.Println("Hotkey F1 is active. Press it!")
+	fmt.Println("Hotkey registered, waiting for F1...")
 
 	for {
 		<-hotkey.Keydown()
 		fmt.Println("F1 pressed — action triggered!")
 
-		keyboard.SendCtrlPlusKey(windows.VK_A)
-		keyboard.SendCtrlPlusKey(windows.VK_X)
+		if skipWindow(windowsUtil) {
+			println("Skipping action due to window mismatch.")
+			continue
+		}
+
+		keyboard.SendCtrlPlusKey(utils.VK_A)
+		keyboard.SendCtrlPlusKey(utils.VK_X)
 
 		time.Sleep(20 * time.Millisecond)
 
@@ -116,9 +129,24 @@ func processMessageByHotkey(
 	}
 }
 
+func skipWindow(windowsUtil *utils.Window) bool {
+	skip := true
+
+	for _, selectedWindow := range selectedWindows {
+		if selectedWindow == windowsUtil.ForegroundWindowClass() {
+			println("Skipping window:", selectedWindow)
+
+			skip = false
+			break
+		}
+	}
+
+	return skip
+}
+
 func processMessageQueue(
 	queue <-chan string,
-	keyboard *windows.Keyboard,
+	keyboard *utils.Keyboard,
 	translator *translate.GoogleTranslator,
 	emojifier *emoji.EndStringEmojifier,
 ) {
@@ -131,13 +159,20 @@ func processMessageQueue(
 	}
 }
 
-func onReady(trayAdapter tray.Tray) {
+func onReady(trayAdapter tray.Tray, windowsUtil *utils.Window) {
 	trayAdapter.SetIcon(iconData)
 	trayAdapter.SetTooltip("wacky_message")
 	trayAdapter.AddMenu("Quit", "", func() { trayAdapter.Quit() })
+	trayAdapter.AddMenu(
+		"Choose windows where hotkey will be active",
+		"",
+		func() {
+			selectedWindows = window.NewInputWindow().OpenHotKeySettings(windowsUtil.WindowClassMap())
+		},
+	)
 }
 
-func getMessageFromClipBoard(clipboard os_local.Clipboard) string {
+func getMessageFromClipBoard(clipboard oslocal.Clipboard) string {
 	message, _ := clipboard.GetText()
 	clean := strings.ReplaceAll(message, "\t", "")
 	clean = strings.ReplaceAll(clean, "\r", "")
@@ -172,7 +207,7 @@ func isWindows() bool {
 	return runtime.GOOS == "windows"
 }
 
-func clearClipboard(clipboard *windows.Clipboard) {
+func clearClipboard(clipboard *utils.Clipboard) {
 	err := clipboard.SetText("Knife in your clipboard 🗡️")
 
 	if err != nil {

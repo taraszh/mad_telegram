@@ -7,8 +7,8 @@ require (
 	github.com/bas24/googletranslatefree v0.0.0-20231117033553-f5859fe54d30
 	github.com/getlantern/systray v1.2.2
 	github.com/gilang-as/google-translate v0.1.1
+	github.com/lxn/win v0.0.0-20210218163916-a377121e959e
 	golang.design/x/hotkey v0.4.1
-	golang.org/x/sys v0.32.0
 )
 
 require (
@@ -22,10 +22,10 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/go-text/typesetting v0.2.1 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
-	github.com/stretchr/testify v1.8.4 // indirect
-	golang.design/x/mainthread v0.3.0 // indirect
-	golang.org/x/exp v0.0.0-20240707233637-46b078467d37 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
+	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f // indirect
 	golang.org/x/exp/shiny v0.0.0-20240707233637-46b078467d37 // indirect
-	golang.org/x/image v0.18.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/image v0.24.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
 )

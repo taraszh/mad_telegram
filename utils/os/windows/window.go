@@ -5,6 +5,8 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+
+	"github.com/lxn/win"
 )
 
 type Window struct {
@@ -31,8 +33,8 @@ func NewWindow() (*Window, error) {
 	}, nil
 }
 
-func (w *Window) GetWindowHWND(substring string) uintptr {
-	var telegramHWND uintptr
+func (w *Window) WindowHWND(substring string) uintptr {
+	var window uintptr
 
 	callback := EnumProc(
 		func(hwnd uintptr, lParam uintptr) uintptr {
@@ -48,14 +50,12 @@ func (w *Window) GetWindowHWND(substring string) uintptr {
 
 			title := syscall.UTF16ToString(buf[:length])
 
-			classBuf := make([]uint16, 256)
-			classNameLen := w.GetClassName(hwnd, classBuf)
-			className := syscall.UTF16ToString(classBuf[:classNameLen])
+			className := w.ClassNameString(hwnd)
 
 			if strings.Contains(strings.ToLower(title), substring) {
 				fmt.Println("Window found!")
 				fmt.Printf("Window Title: %s | Window Class: %s\n", title, className)
-				telegramHWND = hwnd
+				window = hwnd
 			}
 
 			return 1
@@ -66,7 +66,48 @@ func (w *Window) GetWindowHWND(substring string) uintptr {
 		fmt.Println("Error enumerating windows.")
 	}
 
-	return telegramHWND
+	return window
+}
+
+func (w Window) WindowClassMap() map[string]string {
+	winClassMap := make(map[string]string)
+
+	callback := EnumProc(
+		func(hwnd uintptr, lParam uintptr) uintptr {
+			if !w.IsWindowVisible(hwnd) {
+				return 1
+			}
+
+			buf := make([]uint16, 256)
+			length := w.GetWindowText(hwnd, buf)
+			if length == 0 {
+				return 1
+			}
+
+			title := syscall.UTF16ToString(buf[:length])
+			className := w.ClassNameString(hwnd)
+
+			winClassMap[title] = className
+
+			//fmt.Printf("Window Title: %s | Window Class: %s\n", title, className)
+
+			return 1
+		},
+	)
+
+	if !w.EnumWindows(callback, 0) {
+		fmt.Println("Error enumerating windows.")
+	}
+
+	return winClassMap
+}
+
+func (w *Window) ClassNameString(hwnd uintptr) string {
+	buf := make([]uint16, 256)
+	classNameLen, _, _ := w.getClassNameW.Call(hwnd, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	className := syscall.UTF16ToString(buf[:classNameLen])
+
+	return className
 }
 
 func (w *Window) IsWindowVisible(hwnd uintptr) bool {
@@ -79,7 +120,7 @@ func (w *Window) GetWindowText(hwnd uintptr, buf []uint16) int {
 	return int(ret)
 }
 
-func (w *Window) GetClassName(hwnd uintptr, buf []uint16) int {
+func (w *Window) ClassName(hwnd uintptr, buf []uint16) int {
 	ret, _, _ := w.getClassNameW.Call(hwnd, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
 	return int(ret)
 }
@@ -100,4 +141,13 @@ func (w *Window) SetForegroundWindow(hwnd uintptr) bool {
 	ret, _, _ := w.setForegroundWindow.Call(hwnd)
 
 	return ret != 0
+}
+
+func (w Window) ForegroundWindowClass() string {
+	hwnd := win.GetForegroundWindow()
+	if hwnd == 0 {
+		return ""
+	}
+
+	return w.ClassNameString(uintptr(hwnd))
 }
