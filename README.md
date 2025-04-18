@@ -20,7 +20,7 @@ The project allows users to automatically translate the text in the clipboard an
     - If a matching message is found, it modifies the message and sends it to the active window.
 
 3. **Using the Hotkey**:
-- The application supports the `F1` hotkey for processing text.
+- The application supports the `F2` hotkey for processing text.
 - To use the hotkey:
     1. Select the windows where the hotkey will be active by using the "Choose windows where hotkey will be active" option in the tray menu.
     2. Press `F1` while in one of the selected windows.

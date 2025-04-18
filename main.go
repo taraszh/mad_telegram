@@ -37,10 +37,12 @@ func main() {
 		return
 	}
 
+	selectedWindows, _ = oslocal.LoadSelectedWindows()
+
 	var sysTray = &systray_adapter.SystrayAdapter{}
 	var windowsUtils, _ = utils.NewWindow()
 	var keyboard = utils.NewKeyboard()
-	var hk = hotkey.New(nil, hotkey.KeyF1)
+	var hk = hotkey.New(nil, hotkey.KeyF2)
 
 	var emojifier = emoji.NewEndStringEmojifier()
 	var translator = translate.NewGoogleTranslator()
@@ -59,6 +61,26 @@ func main() {
 	processMessageQueue(messageQueue, keyboard, translator, emojifier)
 
 	select {}
+}
+
+func onReady(trayAdapter tray.Tray, windowsUtil *utils.Window) {
+	trayAdapter.SetIcon(iconData)
+	trayAdapter.SetTooltip("wacky_message")
+	trayAdapter.AddMenu("Quit", "", func() { trayAdapter.Quit() })
+	trayAdapter.AddMenu(
+		"Choose windows where hotkey will be active",
+		"",
+		func() {
+			selectedWindows = window.NewInputWindow().
+				OpenHotKeySettings(windowsUtil.WindowClassMap(), selectedWindows)
+
+			if err := oslocal.SaveSelectedWindows(selectedWindows); err != nil {
+				println("Error saving selected windows:", err)
+			} else {
+				println("Selected windows saved successfully.")
+			}
+		},
+	)
 }
 
 func processMessagesWithTrigger(
@@ -95,14 +117,14 @@ func processMessageByHotkey(
 	queue chan<- string,
 ) {
 	if err := hotkey.Register(); err != nil {
-		panic("failed to register F1: " + err.Error())
+		panic("failed to register F2: " + err.Error())
 	}
 
-	fmt.Println("Hotkey registered, waiting for F1...")
+	fmt.Println("Hotkey registered, waiting for F2...")
 
 	for {
 		<-hotkey.Keydown()
-		fmt.Println("F1 pressed — action triggered!")
+		fmt.Println("F2 pressed — action triggered!")
 
 		if skipWindow(windowsUtil) {
 			println("Skipping action due to window mismatch.")
@@ -157,19 +179,6 @@ func processMessageQueue(
 			println("Error typing message:", err)
 		}
 	}
-}
-
-func onReady(trayAdapter tray.Tray, windowsUtil *utils.Window) {
-	trayAdapter.SetIcon(iconData)
-	trayAdapter.SetTooltip("wacky_message")
-	trayAdapter.AddMenu("Quit", "", func() { trayAdapter.Quit() })
-	trayAdapter.AddMenu(
-		"Choose windows where hotkey will be active",
-		"",
-		func() {
-			selectedWindows = window.NewInputWindow().OpenHotKeySettings(windowsUtil.WindowClassMap())
-		},
-	)
 }
 
 func getMessageFromClipBoard(clipboard oslocal.Clipboard) string {

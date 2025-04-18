@@ -6,13 +6,20 @@ import (
 	"os"
 )
 
-func saveSelectedWindows(filePath string, selectedWindows []string) error {
+var configPath = "/selected_windows.json"
+
+func SaveSelectedWindows(selectedWindows []string) error {
 	data, err := json.Marshal(selectedWindows)
 	if err != nil {
-		return fmt.Errorf("failed to marshal selectedWindows: %w", err)
+		return fmt.Errorf("failed to encode selectedWindows: %w", err)
 	}
 
-	err = os.WriteFile(filePath, data, 0644)
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	err = os.WriteFile(currentDir+configPath, data, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
@@ -20,8 +27,13 @@ func saveSelectedWindows(filePath string, selectedWindows []string) error {
 	return nil
 }
 
-func loadSelectedWindows(filePath string) (selectedWindows []string, err error) {
-	data, err := os.ReadFile(filePath)
+func LoadSelectedWindows() (selectedWindows []string, err error) {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return selectedWindows, fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	data, err := os.ReadFile(currentDir + configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return selectedWindows, nil

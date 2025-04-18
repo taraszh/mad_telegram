@@ -25,10 +25,6 @@ func NewInputWindow() *Window {
 	return new(Window)
 }
 
-func (w Window) GetWindow() *app.Window {
-	return w.gioWindow
-}
-
 func (w Window) OpenInputWindow() string {
 	println("Lets open window!")
 
@@ -97,7 +93,8 @@ func (w Window) OpenInputWindow() string {
 		}
 	}
 }
-func (w Window) OpenHotKeySettings(windowClassMap map[string]string) []string {
+
+func (w Window) OpenHotKeySettings(windowClassMap map[string]string, selectedWindows []string) []string {
 	println("Lets open hotkey setting window!")
 
 	var checkboxes []widget.Bool
@@ -105,7 +102,15 @@ func (w Window) OpenHotKeySettings(windowClassMap map[string]string) []string {
 	var values []string
 
 	for key, value := range windowClassMap {
-		checkboxes = append(checkboxes, widget.Bool{})
+		checkbox := widget.Bool{}
+		for _, selected := range selectedWindows {
+			if selected == value {
+				checkbox.Value = true
+				break
+			}
+		}
+
+		checkboxes = append(checkboxes, checkbox)
 		keys = append(keys, key)
 		values = append(values, value)
 	}
