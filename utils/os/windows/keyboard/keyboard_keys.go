@@ -1,4 +1,4 @@
-package windows
+package keyboard
 
 const (
 	VK_A = 0x41

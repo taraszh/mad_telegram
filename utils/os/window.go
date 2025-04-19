@@ -1,5 +1,5 @@
 package os
 
 type Window interface {
-	GetWindows() []string
+	WindowClassMap() map[string]string
 }

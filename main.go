@@ -13,8 +13,10 @@ import (
 	"wacky_message/text/translate"
 	"wacky_message/tray"
 	"wacky_message/tray/systray_adapter"
-	oslocal "wacky_message/utils/os"
-	utils "wacky_message/utils/os/windows"
+	osUtils "wacky_message/utils/os"
+	clipboardUtils "wacky_message/utils/os/windows/clipboard"
+	keyboardUtils "wacky_message/utils/os/windows/keyboard"
+	windowUtils "wacky_message/utils/os/windows/window"
 	"wacky_message/window"
 
 	"golang.design/x/hotkey"
@@ -37,16 +39,18 @@ func main() {
 		return
 	}
 
-	selectedWindows, _ = oslocal.LoadSelectedWindows()
+	selectedWindows, _ = osUtils.LoadSelectedWindows()
 
 	var sysTray = &systray_adapter.SystrayAdapter{}
-	var windowsUtils, _ = utils.NewWindow()
-	var keyboard = utils.NewKeyboard()
+
+	var windowsUtils = windowUtils.NewWindow()
+	var keyboard = keyboardUtils.NewKeyboard()
+	var clipboard = clipboardUtils.NewClipboard()
+
 	var hk = hotkey.New(nil, hotkey.KeyF2)
 
 	var emojifier = emoji.NewEndStringEmojifier()
 	var translator = translate.NewGoogleTranslator()
-	var clipboard = utils.NewClipboard()
 
 	messageQueue := make(chan string, 10)
 
@@ -63,18 +67,19 @@ func main() {
 	select {}
 }
 
-func onReady(trayAdapter tray.Tray, windowsUtil *utils.Window) {
+func onReady(trayAdapter tray.Tray, windowsUtil *windowUtils.Window) {
 	trayAdapter.SetIcon(iconData)
 	trayAdapter.SetTooltip("wacky_message")
 	trayAdapter.AddMenu("Quit", "", func() { trayAdapter.Quit() })
+	trayAdapter.AddSeparator()
 	trayAdapter.AddMenu(
-		"Choose windows where hotkey will be active",
+		"Hotkey settings",
 		"",
 		func() {
 			selectedWindows = window.NewInputWindow().
 				OpenHotKeySettings(windowsUtil.WindowClassMap(), selectedWindows)
 
-			if err := oslocal.SaveSelectedWindows(selectedWindows); err != nil {
+			if err := osUtils.SaveSelectedWindows(selectedWindows); err != nil {
 				println("Error saving selected windows:", err)
 			} else {
 				println("Selected windows saved successfully.")
@@ -84,7 +89,7 @@ func onReady(trayAdapter tray.Tray, windowsUtil *utils.Window) {
 }
 
 func processMessagesWithTrigger(
-	clipboard *utils.Clipboard,
+	clipboard *clipboardUtils.Clipboard,
 	queue chan<- string,
 ) {
 	fmt.Println("Clipboard trigger is registered. Waiting for messages...")
@@ -111,9 +116,9 @@ func processMessagesWithTrigger(
 
 func processMessageByHotkey(
 	hotkey *hotkey.Hotkey,
-	clipboard *utils.Clipboard,
-	keyboard *utils.Keyboard,
-	windowsUtil *utils.Window,
+	clipboard *clipboardUtils.Clipboard,
+	keyboard *keyboardUtils.Keyboard,
+	windowsUtil *windowUtils.Window,
 	queue chan<- string,
 ) {
 	if err := hotkey.Register(); err != nil {
@@ -131,8 +136,8 @@ func processMessageByHotkey(
 			continue
 		}
 
-		keyboard.SendCtrlPlusKey(utils.VK_A)
-		keyboard.SendCtrlPlusKey(utils.VK_X)
+		keyboard.SendCtrlPlusKey(keyboardUtils.VK_A)
+		keyboard.SendCtrlPlusKey(keyboardUtils.VK_X)
 
 		time.Sleep(20 * time.Millisecond)
 
@@ -151,7 +156,7 @@ func processMessageByHotkey(
 	}
 }
 
-func skipWindow(windowsUtil *utils.Window) bool {
+func skipWindow(windowsUtil *windowUtils.Window) bool {
 	skip := true
 
 	for _, selectedWindow := range selectedWindows {
@@ -168,7 +173,7 @@ func skipWindow(windowsUtil *utils.Window) bool {
 
 func processMessageQueue(
 	queue <-chan string,
-	keyboard *utils.Keyboard,
+	keyboard *keyboardUtils.Keyboard,
 	translator *translate.GoogleTranslator,
 	emojifier *emoji.EndStringEmojifier,
 ) {
@@ -181,7 +186,7 @@ func processMessageQueue(
 	}
 }
 
-func getMessageFromClipBoard(clipboard oslocal.Clipboard) string {
+func getMessageFromClipBoard(clipboard osUtils.Clipboard) string {
 	message, _ := clipboard.GetText()
 	clean := strings.ReplaceAll(message, "\t", "")
 	clean = strings.ReplaceAll(clean, "\r", "")
@@ -216,7 +221,7 @@ func isWindows() bool {
 	return runtime.GOOS == "windows"
 }
 
-func clearClipboard(clipboard *utils.Clipboard) {
+func clearClipboard(clipboard *clipboardUtils.Clipboard) {
 	err := clipboard.SetText("Knife in your clipboard 🗡️")
 
 	if err != nil {
