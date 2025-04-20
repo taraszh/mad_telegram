@@ -6,6 +6,10 @@ import (
 
 type SystrayAdapter struct{}
 
+func NewSystrayAdapter() *SystrayAdapter {
+	return &SystrayAdapter{}
+}
+
 func (s *SystrayAdapter) SetIcon(icon []byte) {
 	systray.SetIcon(icon)
 }

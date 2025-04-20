@@ -1,5 +1,6 @@
 package os
 
-type Keyboad interface {
+type Keyboard interface {
 	TypeMessage(string) error
+	SendCtrlPlusKey(key byte)
 }

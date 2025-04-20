@@ -42,11 +42,8 @@ func LoadSelectedWindows() (selectedWindows []string, err error) {
 		return selectedWindows, err
 	}
 
-	err = json.Unmarshal(data, &selectedWindows)
-	if err != nil {
-		println("failed to unmarshal selectedWindows: ", err)
-
-		return selectedWindows, err
+	if err = json.Unmarshal(data, &selectedWindows); err != nil {
+		return selectedWindows, fmt.Errorf("failed to unmarshal selectedWindows: %w", err)
 	}
 
 	return selectedWindows, nil

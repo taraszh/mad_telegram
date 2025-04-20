@@ -1,8 +1,8 @@
-# Wacky Message. Translation and creative modification of clipboard text, and pasting into active input fields
+# Translation and creative modification of clipboard text
 
-Learning to use Go by roughly implementing crazy ideas
+Learning to use Go by roughly implementing controversial ideas
 
-This project processes text from the clipboard by template, translates it into various languages, and inserts the translated text into an active input field in an open window.
+This project processes text from the clipboard by template or by hotkey, translates it into various languages, and inserts the translated text into an active input field in an open window.
 
 ## Description
 
@@ -22,11 +22,11 @@ The project allows users to automatically translate the text in the clipboard an
 3. **Using the Hotkey**:
 - The application supports the `F2` hotkey for processing text.
 - To use the hotkey:
-    1. Select the windows where the hotkey will be active by using the "Choose windows where hotkey will be active" option in the tray menu.
+    1. Select the windows where the hotkey will be active by using the "Hotkey Settings" option in the tray menu.
     2. Press `F2` while in one of the selected windows.
     3. The application will:
         - Copy the selected text to the clipboard.
-        - Process the text (e.g., translation, adding emojis).
+        - Process the text (e.g., translation, adding random emojis).
         - Paste the modified text back into the active input field.
 
 4. **System Tray**:
